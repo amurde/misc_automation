@@ -1,0 +1,17 @@
+- name: Copy java config
+  copy: src=files/jvm.options dest=/etc/logstash/jvm.options
+
+- name: Copy logging config
+  copy: src=files/log4j2.properties dest=/etc/logstash/log4j2.properties
+
+- name: backup logstash sample conf
+  command: mv /etc/logstash/logstash-sample.conf /etc/logstash/logstash-sample.conf_dist 
+
+- name: copy logstash conf
+  copy: src=files/logstash.conf dest=/etc/logstash/logstash.conf
+
+- name: copy logstash yml
+  copy: src=files/logstash.yml dest=/etc/logstash/logstash.yml
+
+- name: copy pipelines yml
+  copy: src=files/pipelines.yml dest=/etc/logstash/pipelines.yml

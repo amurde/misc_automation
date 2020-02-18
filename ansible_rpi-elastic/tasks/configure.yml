@@ -1,0 +1,8 @@
+- name: Copy main config
+  copy: src=files/elasticsearch.yml dest=/etc/elasticsearch/elasticsearch.yml
+
+- name: Copy logging config
+  copy: src=files/log4j2.properties dest=/etc/elasticsearch/log4j2.properties
+
+- name: Copy java config
+  copy: src=files/jvm.options dest=/etc/elasticsearch/jvm.options

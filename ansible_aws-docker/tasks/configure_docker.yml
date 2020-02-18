@@ -1,0 +1,81 @@
+- name: Deploy and run test Docker container
+  hosts: ec2_dyn
+  connection: ssh
+  remote_user: ec2-user
+  gather_facts: no
+  become: true
+  vars:
+       ansible_ssh_private_key_file: ~/wicked-key.pem
+       docker_image_name: proxy-test
+
+  tasks:
+          - name: upgrade all packages
+            yum:
+                name: '*'
+                state: latest
+
+          - name: Install Docker
+            yum:
+                name:
+                     - docker
+                     - python-pip
+                state: present
+
+          - name: Install Docker python dependencies
+            pip:
+                name: docker
+                state: present
+
+
+          - name: Enable Docker service at startup
+            service:
+                 name: docker
+                 state: started
+                 enabled: yes
+
+          - name: add user to docker group
+            user: name="{{ ansible_ssh_user }}" groups=docker append=yes
+
+          - name: reset ssh connection to allow user changes to affect 'current login user'
+            meta: reset_connection
+
+          - name: Create Docker workdir
+            become: false
+            file:
+                 path: ~/app
+                 state: directory
+
+          - name: copy sample docker file
+            become: false
+            copy: src=dockerfiles/Dockerfile dest=~/app/Dockerfile
+
+          - name: copy sample nginx configuration
+            become: false
+            copy: src=dockerfiles/default.conf dest=~/app/default.conf
+
+          - name: Build an image
+            become: false
+            docker_image:
+                   path: ~/app
+                   name: "{{ docker_image_name }}"
+
+          - name: Create Container
+            become: false
+            docker_container:
+                   name: "{{ docker_image_name }}"
+                   image: "{{ docker_image_name }}"
+                   ports: "8443:8443"
+                   privileged: true
+
+          - name: Create Systemd Unit File
+            template: src=dockerfiles/systemd.j2 dest="/etc/systemd/system/{{ docker_image_name }}.service"
+          
+          - name: reload systemd daemon
+            command: systemctl daemon-reload
+
+          - name: Enable container service
+            service:
+                   name: "{{ docker_image_name }}"
+                   state: started
+                   enabled: yes
+

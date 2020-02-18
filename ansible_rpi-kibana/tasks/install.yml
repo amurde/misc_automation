@@ -1,0 +1,36 @@
+- name: Nodesource apt key
+  apt_key:
+          url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+          state: present
+
+- name: Adding nodesource repo
+  apt_repository:
+          repo: "deb https://deb.nodesource.com/{{ nodejs_version }} {{ ansible_distribution_release }} main"
+          state: present
+
+- name: Install nodejs
+  apt: 
+        name: nodejs
+        state: present 
+        update_cache: true
+
+- name: Get and unpack Kibana
+  unarchive:
+        src: "https://artifacts.elastic.co/downloads/kibana/kibana-{{ kibana_version }}-linux-x86_64.tar.gz"
+        dest: /opt
+        remote_src: yes
+
+- name: Create symlink for Kibana
+  file:
+        src: "/opt/kibana-{{ kibana_version }}-linux-x86_64"
+        dest: /opt/kibana
+        state: link
+
+- name: Backup Kibana default node executable
+  command: mv /opt/kibana/node/bin/node /opt/kibana/node/bin/node.bak
+ 
+- name: Symlink distro node executable to Kibana
+  file:
+        src: /usr/bin/node
+        dest: /opt/kibana/node/bin/node
+        state: link

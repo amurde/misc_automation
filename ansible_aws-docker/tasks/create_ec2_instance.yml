@@ -1,0 +1,53 @@
+- name: Create private key
+  ec2_key:
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          region: "{{ aws_region }}"
+          name: "{{ pro_name }}-key"
+          force: yes
+          state: present
+  register: priv_key
+
+- name: Save private key
+  copy: content="{{ priv_key.key.private_key }}" dest="~/{{ pro_name }}-key.pem" mode=0600
+  when: priv_key.changed
+
+- name: Set private key location variable
+  set_fact:
+        priv_key_location: "~/{{ pro_name }}-key.pem" 
+
+- name: Create EC2 instance
+  ec2:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ aws_region }}"
+        key_name: "{{ priv_key.key.name }}"
+        group_id: "{{ sec_group_id }}"
+        instance_type: "{{ aws_instance }}"
+        image: "{{ aws_ami }}"
+        vpc_subnet_id: "{{ pub_subnet_id }}"
+        count_tag:
+                Name: "{{ pro_name }}"
+        exact_count: 1
+        instance_tags:
+                Name: "{{ pro_name }}"
+        assign_public_ip: yes
+        wait: yes
+  register: instance
+
+  #- debug: msg="{{ instance }}"
+
+- name: Getting the Public DNS name for the created instance
+  ec2_instance_facts:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ aws_region }}"
+# result is a list, thats why we need to refer by index
+        instance_ids: "{{ instance.tagged_instances[0].id }}"
+  register: ec2_metadata
+
+- name: Set instance DNS name variable
+  set_fact:
+        instance_dns_name: "{{ ec2_metadata.instances[0].public_dns_name }}"
+
+- debug: msg="You can access created instance using ssh -i ~/{{ pro_name }}-key.pem ec2-user@{{ ec2_metadata.instances[0].public_dns_name }} "

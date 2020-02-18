@@ -1,0 +1,5 @@
+- name: Copy main config
+  copy: src=files/kibana.yml dest=/opt/kibana/config/kibana.yml
+
+- name: Create systemd service definition
+  copy: src=files/kibana.service dest=/etc/systemd/system/kibana.service

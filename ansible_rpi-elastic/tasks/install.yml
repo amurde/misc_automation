@@ -1,0 +1,21 @@
+- name: Install JRE and other dependancies
+  apt: 
+        name: [ 'apt-transport-https', 'default-jre' ] 
+        state: present 
+        update_cache: true
+
+- name: Get deb file from elastic.co
+  get_url:
+        url: "{{ item }}"
+        dest: /tmp/
+  with_items:
+        - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-{{ elastic_version }}.deb
+        - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-{{ elastic_version }}.deb.sha512
+
+- name: Validate checksum
+  command: chdir=/tmp shasum -a 512 -c "/tmp/elasticsearch-{{ elastic_version }}.deb.sha512"
+
+- name: Install Elasticsearch
+  apt:
+        deb: "/tmp/elasticsearch-{{ elastic_version }}.deb"
+        state: present

@@ -1,0 +1,6 @@
+- hosts: elastic
+  vars: 
+        logstash_version: "6.6.1"
+  become: true
+  roles:
+          - rpi-logstash

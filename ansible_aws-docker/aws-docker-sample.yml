@@ -1,0 +1,14 @@
+- hosts: aws
+  connection: local
+  gather_facts: false
+  vars:
+          pro_name: wicked
+          aws_access_key: <your key here> 
+          aws_secret_key: <your secret key here>
+          aws_region: eu-central-1
+          aws_vpc_cidr: 10.0.0.0/24
+          aws_pub_cidr: 10.0.0.0/28
+          aws_instance: t2.micro
+          aws_ami: ami-09def150731bdbcc2 #TODO: how to get ami-* name?
+  roles:
+        - aws-docker-sample

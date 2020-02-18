@@ -1,0 +1,7 @@
+- hosts: elastic
+  vars: 
+        kibana_version: "6.6.1"
+        nodejs_version: "node_10.x"
+  become: true
+  roles:
+          - rpi-kibana

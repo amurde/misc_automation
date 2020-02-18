@@ -1,0 +1,96 @@
+- name: Create VPC private subnet
+  ec2_vpc_net:
+          name: "{{ pro_name }}_vpc"
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          region: "{{ aws_region }}"
+          cidr_block: "{{ aws_vpc_cidr }}"
+          state: "present"
+          resource_tags:
+                  Name: "{{ pro_name }}"
+  register: vpc
+
+- name: Set VPC ID in host variable
+  set_fact:
+          priv_vpc_id: "{{ vpc.vpc.id }}"
+
+- name: Sleep for 10 sec, waiting to create VPC
+  wait_for: timeout=10
+  delegate_to: localhost
+
+- name: Create and associate public subnet to VPC # Gotcha with this module is related to botocore version, 
+                                                  # in debian i was forced to upgrade all packages related to boto from testing repo
+  ec2_vpc_subnet:
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          region: "{{ aws_region }}"
+          vpc_id: "{{ priv_vpc_id }}"
+          cidr: "{{ aws_pub_cidr }}"
+          az: "{{ aws_region }}a" #TODO: is it possible to find more universal way for this?
+          state: "present"
+          wait: yes               
+          wait_timeout: 10
+          map_public: yes
+          resource_tags:
+                  Name: "{{ pro_name }}"
+  register: pub_subnet
+
+- name: Set public subnet ID in host variable
+  set_fact:
+          pub_subnet_id: "{{ pub_subnet.subnet.id }}"
+
+- name: Sleep for 10 sec, waiting to create subnet
+  wait_for: timeout=10
+  delegate_to: localhost
+
+- name: GW for VPC
+  ec2_vpc_igw:
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          region: "{{ aws_region }}"
+          vpc_id: "{{ priv_vpc_id }}"
+          state: present
+          resource_tags:
+                  Name: "{{ pro_name }}"
+  register: vpc_igw
+
+- name: Public subnet routing
+  ec2_vpc_route_table:
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          region: "{{ aws_region }}"
+          vpc_id: "{{ priv_vpc_id }}"
+          subnets:
+               - "{{ pub_subnet.subnet.id }}"
+          routes:
+               - dest: "0.0.0.0/0"
+                 gateway_id: "{{ vpc_igw.gateway_id }}"
+          resource_tags:
+                  Name: "{{ pro_name }}"
+
+- name: Create security group
+  ec2_group:
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          region: "{{ aws_region }}"
+          name: "{{ pro_name }}_DMZ"
+          description: "{{ pro_name }}_SecurityGroup"
+          vpc_id: "{{ priv_vpc_id }}"
+          state: present
+          rules:
+                  - proto: "tcp"
+                    from_port: "22"
+                    to_port: "22"
+                    cidr_ip: "0.0.0.0/0"
+                  - proto: "tcp"
+                    from_port: "8443"
+                    to_port: "8443"
+                    cidr_ip: "0.0.0.0/0"
+          resource_tags:
+                  Name: "{{ pro_name }}"
+  register: sec_group
+
+- name: Set security group ID in host variable
+  set_fact:
+          sec_group_id: "{{ sec_group.group_id }}"
+
