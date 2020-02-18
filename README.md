@@ -1,2 +1,3 @@
 # misc_automation
-Some useful scripts and examples
+Scripts and examples
+Some is outdated, some is truncuted and holding strange logic, but usefull for reference
